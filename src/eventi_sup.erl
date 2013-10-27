@@ -23,5 +23,7 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
+	Server = ?CHILD(eventi_srv, worker),
+
 	Strategy = {one_for_all, 10, 3600},
-	{ok, {Strategy, []}}.
+	{ok, {Strategy, [Server]}}.

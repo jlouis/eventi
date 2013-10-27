@@ -9,5 +9,7 @@
 	]},
   {modules, []},
   {mod, { eventi_app, []}},
-  {env, []}
+  {env, [
+  	%% Location of the Venti database in the file system.
+  	{dir, "."}]}
  ]}.
