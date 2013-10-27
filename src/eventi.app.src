@@ -1,0 +1,13 @@
+{application, eventi,
+ [
+  {description, "Erlang Venti Server implementation"},
+  {vsn, "0.1"},
+  {registered, []},
+  {applications, [
+	kernel,
+	stdlib
+	]},
+  {modules, []},
+  {mod, { eventi_app, []}},
+  {env, []}
+ ]}.
