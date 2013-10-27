@@ -13,8 +13,25 @@
 	encode_packet_r/1
 	]).
 
--type t_msg() :: term().
--type r_msg() :: term().
+-type t_msg() ::
+	  {t_hello, byte(), binary(), binary(), byte(), binary(), binary()}
+	| {t_ping, byte()}
+	| {t_read, byte(), binary(), byte(), byte(), integer()}
+	| {t_write, byte(), byte(), byte(), binary()}
+	| {t_sync, byte()}
+	| {t_goodbye, byte()}.
+
+-type r_msg() ::
+	  {r_hello, byte(), binary(), byte(), byte()}
+	| {r_ping, byte()}
+	| {r_read, byte(), binary()}
+	| {r_write, byte(), binary()}
+	| {r_sync, byte()}
+	| {r_error, byte(), binary()}.
+
+-export_type([
+	t_msg/0, r_msg/0
+	]).
 
 %% Message types in Venti (plan9port)
 -define(VtRerror, 1).
@@ -38,14 +55,18 @@
 %% DECODING
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% decode/1 decodes a message including 2 byte size header
+%% decode_t/1 decodes a T-type packet including size header
+-spec decode_t(binary()) -> t_msg().
 decode_t(<<L:16/integer, P:L/binary>>) ->
 	decode_packet_t(P).
 
+%% decode_r/1 decodes a R-type packet including size header
+-spec decode_r(binary()) -> r_msg().
 decode_r(<<L:16/integer, P:L/binary>>) ->
 	decode_packet_r(P).
 
-%% decode_packet/1 decodes a message when the two byte size header has been stripped off
+%% decode_packet_t/1 decodes a T-message when the two byte size header has been stripped off
+-spec decode_packet_t(binary()) -> t_msg().
 decode_packet_t(<<?VtThello, Tag, Rest/binary>>) ->
 	{Version, RestVersion} = decode_string(Rest),
 	{Uid, RestUid} = decode_string(RestVersion),
@@ -65,6 +86,8 @@ decode_packet_t(<<?VtTsync, Tag>>) ->
 decode_packet_t(<<?VtTgoodbye, Tag>>) ->
 	{t_goodbye, Tag}.
 
+%% decode_packet_r/1 decodes a R-message when the two byte size header has been stripped off
+-spec decode_packet_r(binary()) -> r_msg().
 decode_packet_r(<<?VtRhello, Tag, SidL:16/integer, Sid:SidL/binary, RCrypto, RCodec>>) ->
 	{r_hello, Tag, Sid, RCrypto, RCodec};
 decode_packet_r(<<?VtRping, Tag>>) ->
