@@ -1,5 +1,5 @@
 %%% venti_proto implements the venti low level binary protocol
--module(venti_proto).
+-module(eventi_proto).
 
 -export([
 	decode_t/1,
