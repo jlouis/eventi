@@ -34,12 +34,12 @@ start_link() ->
 handle_msg({t_hello, Tag, eventi_02, _Uid, _Strength, _Crypto, _Codec}) ->
 	{reply, {r_hello, Tag, <<"eventi">>, 0,0}};
 handle_msg({t_ping, Tag}) -> {reply, {r_ping, Tag}};
-handle_msg({t_write, Tag, _Type, _Pad, Data}) ->
+handle_msg({t_write, Tag, Type, Data}) ->
 	Score = score(Data),
-	ok = gen_server:call(?MODULE, {write, Score, Data}, ?TIMEOUT),
+	ok = gen_server:call(?MODULE, {write, Score, Type, Data}, ?TIMEOUT),
 	{reply, {r_write, Tag, Score}};
-handle_msg({t_read, Tag, Score, _Type, _Pad, Count}) ->
-	case gen_server:call(?MODULE, {read, Score}, ?TIMEOUT) of
+handle_msg({t_read, Tag, Score, Type, Count}) ->
+	case gen_server:call(?MODULE, {read, Score, Type}, ?TIMEOUT) of
 		{ok, Data} when byte_size(Data) =< Count ->
 		  {reply, {r_read, Tag, Data}};
 		{ok, _Data} ->
@@ -58,11 +58,13 @@ init([VentiDir]) ->
 	{ok, DBRef} = eleveldb:open(VentiDir, [{create_if_missing, true}]),
 	{ok, #state{ db = DBRef }}.
 	
-handle_call({write, Score, Data}, _From, #state { db = Db } = State) ->
-	ok = eleveldb:write(Db, [{put, Score, Data}], [{sync, true}]),
+handle_call({write, Score, Type, Data}, _From, #state { db = Db } = State) ->
+	Key = <<Score/binary, Type>>,
+	ok = eleveldb:write(Db, [{put, Key, Data}], [{sync, true}]),
 	{reply, ok, State};
-handle_call({read, Score}, _From, #state { db = Db } = State) ->
-	R = eleveldb:read(Db, Score, [{verify_checksums, true}, {fill_cache, true}]),
+handle_call({read, Score, Type}, _From, #state { db = Db } = State) ->
+	Key = <<Score/binary, Type>>,
+	R = eleveldb:read(Db, Key, [{verify_checksums, true}, {fill_cache, true}]),
 	{reply, R, State};
 handle_call(Msg, _From, State) ->
 	_ = lager:error("Unknown call: ~p", [Msg]),
