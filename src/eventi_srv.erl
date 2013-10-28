@@ -43,9 +43,9 @@ handle_msg({t_read, Tag, Score, Type, Count}) ->
 		{ok, Data} when byte_size(Data) =< Count ->
 		  {reply, {r_read, Tag, Data}};
 		{ok, _Data} ->
-		  {reply, {r_error, Tag, <<"Count Exceeded">>}};
+		  {reply, {r_error, Tag, count_exceeded}};
 		not_found ->
-		  {reply, {r_error, Tag, <<"Data not found">>}}
+		  {reply, {r_error, Tag, not_found}}
 	end;
 handle_msg({t_sync, Tag}) ->
 	%% Current setup makes every call sync for simplicity

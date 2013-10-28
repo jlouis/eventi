@@ -27,7 +27,7 @@
 	| {r_read, byte(), binary()}
 	| {r_write, byte(), binary()}
 	| {r_sync, byte()}
-	| {r_error, byte(), binary()}.
+	| {r_error, byte(), atom() | {string, binary()}}.
 
 -export_type([
 	t_msg/0, r_msg/0
@@ -99,7 +99,7 @@ decode_packet_r(<<?VtRwrite, Tag, Score:20/binary>>) ->
 decode_packet_r(<<?VtRsync, Tag>>) ->
 	{r_sync, Tag};
 decode_packet_r(<<?VtRerror, Tag, ErrL:16/integer, Err:ErrL/binary>>) ->
-	{r_error, Tag, Err}.
+	{r_error, Tag, {string, Err}}.
 
 decode_string(<<L:16/integer, Str:L/binary, Rest/binary>>) -> {Str, Rest}.
 decode_parameter(<<L:8/integer, Param:L/binary, Rest/binary>>) -> {Param, Rest}.
@@ -140,8 +140,11 @@ encode_packet_r({r_write, Tag, Score}) ->
 	20 = byte_size(Score),
 	[?VtRwrite, Tag, Score];
 encode_packet_r({r_sync, Tag}) -> [?VtRsync, Tag];
-encode_packet_r({r_error, Tag, Err}) -> [?VtRerror, Tag, encode_string(Err)].
+encode_packet_r({r_error, Tag, Err}) -> [?VtRerror, Tag, encode_string(err_to_string(Err))].
 
+
+err_to_string(count_exceeded) -> <<"Count Exceeded">>;
+err_to_string(not_found) -> <<"Not Found">>.
 
 encode_string(Str) ->
 	Sz = byte_size(Str),
