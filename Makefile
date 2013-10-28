@@ -8,6 +8,6 @@ dep_lager = https://github.com/basho/lager master
 dep_eleveldb = https://github.com/basho/eleveldb master
 dep_ranch = pkg://ranch master
 
-PLT_APPS=kernel stdlib
+PLT_APPS=kernel stdlib crypto
 
 include erlang.mk

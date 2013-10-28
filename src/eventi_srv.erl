@@ -87,5 +87,5 @@ code_change(_OldVsn, State, _Extra) ->
 %% Internal
 
 score(B) when is_binary(B) ->
-	crypto:hash(sha1, B).
+	crypto:hash(sha, B).
 	
