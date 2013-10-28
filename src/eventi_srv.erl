@@ -10,7 +10,9 @@
 
 -export([
 	start_link/0,
-	handle_msg/1
+	handle_msg/1,
+	read/3,
+	write/2
 	]).
 	
 -record(state, {
@@ -23,6 +25,30 @@
 start_link() ->
 	{ok, VentiDir} = application:get_env(eventi, dir),
 	gen_server:start_link({local, ?MODULE}, ?MODULE, [VentiDir], []).
+
+%% read/3 executes a read of `{Score, Type}' towards the venti store
+-spec read(Score, Type, MaxCount) -> {ok, Data} | {error, Reason}
+	when
+	  Score :: binary(),
+	  Type :: char(),
+	  MaxCount :: integer(),
+	  Data :: binary(),
+	  Reason :: term().
+read(Score, Type, MaxCount) ->
+	case handle_msg({t_read, 0, Score, Type, MaxCount}) of
+	  {reply, {r_read, 0, Data}} -> {ok, Data};
+	  {reply, {r_error, 0, Reason}} -> {error, Reason}
+	end.
+
+%% write/2 writes a pair of `{Type, Data}' to eVenti
+-spec write(Type, Data) -> Score
+	when
+	  Type :: char(),
+	  Data :: binary(),
+	  Score :: binary().
+write(Type, Data) ->
+	{reply, {r_write, 0, Score}} = handle_msg({t_write, 0, Type, Data}),
+	Score.
 
 %% handle_msg/1 handles Venti client messages on the server side
 %% We try hard to avoid going through the gen_server if possible
