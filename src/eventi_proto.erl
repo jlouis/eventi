@@ -16,8 +16,8 @@
 -type t_msg() ::
 	  {t_hello, byte(), binary(), binary(), byte(), binary(), binary()}
 	| {t_ping, byte()}
-	| {t_read, byte(), binary(), byte(), byte(), integer()}
-	| {t_write, byte(), byte(), byte(), binary()}
+	| {t_read, byte(), binary(), byte(), integer()}
+	| {t_write, byte(), byte(), binary()}
 	| {t_sync, byte()}
 	| {t_goodbye, byte()}.
 
@@ -77,10 +77,10 @@ decode_packet_t(<<?VtThello, Tag, Rest/binary>>) ->
 	{t_hello, Tag, Version, Uid, Strength, Crypto, Codec};
 decode_packet_t(<<?VtTping, Tag>>) ->
 	{t_ping, Tag};
-decode_packet_t(<<?VtTread, Tag, Score:20/binary, Type, Pad, Count:16/integer>>) ->
-	{t_read, Tag, Score, Type, Pad, Count};
-decode_packet_t(<<?VtTwrite, Tag, Type, Pad:3/binary, Data/binary>>) ->
-	{t_write, Tag, Type, Pad, Data};
+decode_packet_t(<<?VtTread, Tag, Score:20/binary, Type, _Pad, Count:16/integer>>) ->
+	{t_read, Tag, Score, Type, Count};
+decode_packet_t(<<?VtTwrite, Tag, Type, _Pad:3/binary, Data/binary>>) ->
+	{t_write, Tag, Type, Data};
 decode_packet_t(<<?VtTsync, Tag>>) ->
 	{t_sync, Tag};
 decode_packet_t(<<?VtTgoodbye, Tag>>) ->
@@ -124,11 +124,11 @@ encode_r(Msg) ->
 encode_packet_t({t_hello, Tag, Version, Uid, Strength, Crypto, Codec}) ->
 	[?VtThello, Tag, encode_string(Version), encode_string(Uid), Strength, encode_param(Crypto), encode_param(Codec)];
 encode_packet_t({t_ping, Tag}) -> [?VtTping, Tag];
-encode_packet_t({t_read, Tag, Score, Type, Pad, Count}) ->
+encode_packet_t({t_read, Tag, Score, Type, Count}) ->
 	20 = byte_size(Score),
-	[?VtTread, Tag, Score, Type, Pad, <<Count:16/integer>>];
-encode_packet_t({t_write, Tag, Type, Pad, Data}) ->
-	[?VtTwrite, Tag, Type, Pad, Data];
+	[?VtTread, Tag, Score, Type, 0, <<Count:16/integer>>];
+encode_packet_t({t_write, Tag, Type, Data}) ->
+	[?VtTwrite, Tag, Type, 0, 0, 0, Data];
 encode_packet_t({t_sync, Tag}) -> [?VtTsync, Tag];
 encode_packet_t({t_goodbye, Tag}) -> [?VtTgoodbye, Tag].
 
