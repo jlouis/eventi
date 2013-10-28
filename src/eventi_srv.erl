@@ -64,7 +64,7 @@ handle_call({write, Score, Type, Data}, _From, #state { db = Db } = State) ->
 	{reply, ok, State};
 handle_call({read, Score, Type}, _From, #state { db = Db } = State) ->
 	Key = <<Score/binary, Type>>,
-	R = eleveldb:read(Db, Key, [{verify_checksums, true}, {fill_cache, true}]),
+	R = eleveldb:get(Db, Key, [{verify_checksums, true}, {fill_cache, true}]),
 	{reply, R, State};
 handle_call(Msg, _From, State) ->
 	_ = lager:error("Unknown call: ~p", [Msg]),
