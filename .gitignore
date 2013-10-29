@@ -3,4 +3,6 @@
 .erlang.mk.packages.v1
 .eventi.plt
 deps
-
+relx
+dialyzer.out
+_rel
