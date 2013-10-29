@@ -11,3 +11,6 @@ dep_ranch = pkg://ranch master
 PLT_APPS=kernel stdlib crypto
 
 include erlang.mk
+
+console:
+	./_rel/bin/eventi console -pa ../ebin
