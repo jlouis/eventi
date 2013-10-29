@@ -1,5 +1,13 @@
 %%% venti_proto implements the venti low level binary protocol
--module(eventi_proto).
+-module(eventi_protocol).
+
+-include("version.hrl").
+
+%% Ranch life
+-export([
+	start_link/4,
+	init/4
+	]).
 
 -export([
 	decode_t/1,
@@ -51,6 +59,57 @@
 -define(VtRwrite, 15).
 -define(VtTsync, 16).
 -define(VtRsync, 17).
+
+%% Ranch
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+start_link(Ref, Socket, Transport, Opts) ->
+        Pid = spawn_link(?MODULE, init, [Ref, Socket, Transport, Opts]),
+        {ok, Pid}.
+
+init(Ref, Socket, Transport, _Opts = []) ->
+ 	ok = ranch:accept_ack(Ref),
+	Transport:setopts(Socket, [{packet, line}, {active, once}]),
+	handshake(Socket, Transport),
+	Transport:setopts(Socket, [{packet, 2}, {active, once}]),
+	expect(t_hello, Socket, Transport).
+
+handshake(Socket, Transport) ->
+	Transport:send(Socket, ["venti", $-, "2:4:5", $-, "eVenti server ", ?EVENTI_VERSION, $\n]),
+	case pull(Socket, Transport, false) of
+		{ok, Data} ->
+			ok = parse_version(Socket, Data);
+		stop -> ok
+	end.
+
+
+%% Operation
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+expect(Command, Socket, Transport) ->
+	case pull(Socket, Transport, true) of
+		{ok, Packet} ->
+			T = decode_packet_t(Packet),
+			Command = element(1, T),
+			{reply, Rep} = event_srv:handle_message(T),
+			Transport:send(Socket, encode_packet_r(Rep)),
+			loop(Socket, Transport);
+		stop -> ok
+	end.
+			
+loop(Socket, Transport) ->
+	case pull(Socket, Transport, true) of
+		{ok, Packet} ->
+			T = decode_packet_t(Packet),
+			case event_srv:handle_message(T) of
+				{reply, Rep} ->
+					Transport:send(Socket, encode_packet_r(Rep)),
+					loop(Socket, Transport);
+				{stop, goodbye} ->
+					Transport:close(Socket)
+			end;
+		stop -> ok
+	end.
 
 %% DECODING
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -155,3 +214,27 @@ encode_param(Param) ->
 	Sz = byte_size(Param),
 	true = Sz < 256,
 	<<Sz, Param/binary>>.
+
+%% HELPERS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+pull(Socket, Transport, Active) ->
+	receive
+		{tcp, Socket, Data} when Active ->
+			Transport:setopts(Socket, [{active, once}]),
+			{ok, Data};
+		{tcp, Socket, Data} ->
+			{ok, Data};
+		{tcp_closed, Socket} ->
+			stop;
+		{tcp_error, Socket, Reason} ->
+			lager:info("TCP Error: ~p", [Reason]),
+			stop
+	end.
+		
+			
+parse_version(_Socket, Data) ->
+	[<<"venti">>, Versions, _Comment] = binary:split(Data, <<"-">>, [global]),
+	Versions = binary:split(Versions, <<":">>, [global]),
+	lager:debug("Client versions understood: ~p", [Versions]), %% @todo: Output more information about the socket
+	ok.

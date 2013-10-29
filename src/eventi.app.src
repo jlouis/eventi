@@ -5,7 +5,8 @@
   {registered, []},
   {applications, [
 	kernel,
-	stdlib
+	stdlib,
+	ranch
 	]},
   {modules, []},
   {mod, { eventi_app, []}},

@@ -54,8 +54,8 @@ write(Type, Data) ->
 %% We try hard to avoid going through the gen_server if possible
 -spec handle_msg(Request) -> {reply, Reply} | {stop, Reason}
 	when
-	  Request :: eventi_proto:t_msg(),
-	  Reply :: eventi_proto:r_msg(),
+	  Request :: eventi_protocol:t_msg(),
+	  Reply :: eventi_protocol:r_msg(),
 	  Reason :: term().
 handle_msg({t_hello, Tag, eventi_02, _Uid, _Strength, _Crypto, _Codec}) ->
 	{reply, {r_hello, Tag, <<"eventi">>, 0,0}};
