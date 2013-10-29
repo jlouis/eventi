@@ -4,9 +4,12 @@
   {vsn, "0.1"},
   {registered, []},
   {applications, [
+  	crypto,
+	eleveldb,
 	kernel,
-	stdlib,
-	ranch
+	lager,
+	ranch,
+	stdlib
 	]},
   {modules, []},
   {mod, { eventi_app, []}},

@@ -57,12 +57,13 @@ write(Type, Data) ->
 	  Request :: eventi_protocol:t_msg(),
 	  Reply :: eventi_protocol:r_msg(),
 	  Reason :: term().
-handle_msg({t_hello, Tag, eventi_02, _Uid, _Strength, _Crypto, _Codec}) ->
+handle_msg({t_hello, Tag, <<"02">>, _Uid, _Strength, _Crypto, _Codec}) ->
 	{reply, {r_hello, Tag, <<"eventi">>, 0,0}};
 handle_msg({t_ping, Tag}) -> {reply, {r_ping, Tag}};
 handle_msg({t_write, Tag, Type, Data}) ->
 	Score = score(Data),
 	ok = gen_server:call(?MODULE, {write, Score, Type, Data}, ?TIMEOUT),
+	ok = lager:debug("Writing ~B bytes with Score=~p", [byte_size(Data), Score]),
 	{reply, {r_write, Tag, Score}};
 handle_msg({t_read, Tag, Score, Type, Count}) ->
 	case gen_server:call(?MODULE, {read, Score, Type}, ?TIMEOUT) of
@@ -75,22 +76,26 @@ handle_msg({t_read, Tag, Score, Type, Count}) ->
 	end;
 handle_msg({t_sync, Tag}) ->
 	%% Current setup makes every call sync for simplicity
+	ok = lager:debug("Tsync"),
 	{reply, {r_sync, Tag}};
 handle_msg({t_goodbye, _Tag}) -> {stop, goodbye}.
 
 %% Callbacks
 
 init([VentiDir]) ->
+	ok = lager:debug("Opening venti data store at ~p", [VentiDir]),
 	{ok, DBRef} = eleveldb:open(VentiDir, [{create_if_missing, true}]),
 	{ok, #state{ db = DBRef }}.
 	
 handle_call({write, Score, Type, Data}, _From, #state { db = Db } = State) ->
 	Key = <<Score/binary, Type>>,
-	ok = eleveldb:write(Db, [{put, Key, Data}], [{sync, true}]),
+	lager:debug("Writing: ~p", [Key]),
+	ok = eleveldb:write(Db, [{put, Key, Data}], []),
 	{reply, ok, State};
 handle_call({read, Score, Type}, _From, #state { db = Db } = State) ->
 	Key = <<Score/binary, Type>>,
-	R = eleveldb:get(Db, Key, [{verify_checksums, true}, {fill_cache, true}]),
+	lager:debug("Reading: ~p", [Key]),
+	R = eleveldb:get(Db, Key, []),
 	{reply, R, State};
 handle_call(Msg, _From, State) ->
 	_ = lager:error("Unknown call: ~p", [Msg]),

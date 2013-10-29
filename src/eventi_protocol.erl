@@ -91,7 +91,7 @@ expect(Command, Socket, Transport) ->
 		{ok, Packet} ->
 			T = decode_packet_t(Packet),
 			Command = element(1, T),
-			{reply, Rep} = event_srv:handle_message(T),
+			{reply, Rep} = eventi_srv:handle_msg(T),
 			Transport:send(Socket, encode_packet_r(Rep)),
 			loop(Socket, Transport);
 		stop -> ok
@@ -101,8 +101,10 @@ loop(Socket, Transport) ->
 	case pull(Socket, Transport, true) of
 		{ok, Packet} ->
 			T = decode_packet_t(Packet),
-			case event_srv:handle_message(T) of
+			ok = lager:debug("T packet: ~p", [T]),
+			case eventi_srv:handle_msg(T) of
 				{reply, Rep} ->
+					ok = lager:debug("R packet: ~p", [Rep]),
 					Transport:send(Socket, encode_packet_r(Rep)),
 					loop(Socket, Transport);
 				{stop, goodbye} ->
@@ -228,13 +230,14 @@ pull(Socket, Transport, Active) ->
 		{tcp_closed, Socket} ->
 			stop;
 		{tcp_error, Socket, Reason} ->
-			lager:info("TCP Error: ~p", [Reason]),
+			ok = lager:info("TCP Error: ~p", [Reason]),
 			stop
 	end.
 		
 			
 parse_version(_Socket, Data) ->
 	[<<"venti">>, Versions, _Comment] = binary:split(Data, <<"-">>, [global]),
-	Versions = binary:split(Versions, <<":">>, [global]),
-	lager:debug("Client versions understood: ~p", [Versions]), %% @todo: Output more information about the socket
+	DecodedVersions = binary:split(Versions, <<":">>, [global]),
+	%% TODO: Only accept valid versions!
+	ok = lager:debug("Client versions understood: ~p", [DecodedVersions]), %% @todo: Output more information about the socket
 	ok.
