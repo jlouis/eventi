@@ -75,7 +75,7 @@ init(Ref, Socket, Transport, _Opts = []) ->
 	expect(t_hello, Socket, Transport).
 
 handshake(Socket, Transport) ->
-	Transport:send(Socket, ["venti", $-, "2:4:5", $-, "eVenti server ", ?EVENTI_VERSION, $\n]),
+	Transport:send(Socket, ["venti", $-, "02", $-, "eVenti server ", ?EVENTI_VERSION, $\n]),
 	case pull(Socket, Transport, false) of
 		{ok, Data} ->
 			ok = parse_version(Socket, Data);
