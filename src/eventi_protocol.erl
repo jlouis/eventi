@@ -149,7 +149,7 @@ decode_packet_t(<<?VtTgoodbye, Tag>>) ->
 
 %% decode_packet_r/1 decodes a R-message when the two byte size header has been stripped off
 -spec decode_packet_r(binary()) -> r_msg().
-decode_packet_r(<<?VtRhello, Tag, SidL:16/integer, Sid:SidL/binary, RCrypto, RCodec>>) ->
+decode_packet_r(<<?VtRhello, Tag, SidL:16/integer, Sid:SidL/binary, RCrypto, RCodec>>) when SidL =< 1024 ->
 	{r_hello, Tag, Sid, RCrypto, RCodec};
 decode_packet_r(<<?VtRping, Tag>>) ->
 	{r_ping, Tag};
@@ -159,10 +159,10 @@ decode_packet_r(<<?VtRwrite, Tag, Score:20/binary>>) ->
 	{r_write, Tag, Score};
 decode_packet_r(<<?VtRsync, Tag>>) ->
 	{r_sync, Tag};
-decode_packet_r(<<?VtRerror, Tag, ErrL:16/integer, Err:ErrL/binary>>) ->
+decode_packet_r(<<?VtRerror, Tag, ErrL:16/integer, Err:ErrL/binary>>) when ErrL =< 1024 ->
 	{r_error, Tag, {string, Err}}.
 
-decode_string(<<L:16/integer, Str:L/binary, Rest/binary>>) -> {Str, Rest}.
+decode_string(<<L:16/integer, Str:L/binary, Rest/binary>>) when L =< 1024 -> {Str, Rest}.
 decode_parameter(<<L:8/integer, Param:L/binary, Rest/binary>>) -> {Param, Rest}.
 
 %% ENCODING
@@ -209,7 +209,7 @@ err_to_string(not_found) -> <<"Not Found">>.
 
 encode_string(Str) ->
 	Sz = byte_size(Str),
-	true = Sz < 65536,
+	true = Sz =< 1024,
 	<<Sz:16/integer, Str/binary>>.
 
 encode_param(Param) ->
