@@ -72,19 +72,16 @@ init(Ref, Socket, Transport, _Opts = []) ->
 	Transport:setopts(Socket, [{packet, line}, {active, once}]),
 	case handshake(Socket, Transport) of
 		stop -> ok;
-		{ok, 2} ->
+		ok ->
 			Transport:setopts(Socket, [{packet, 2}, {active, once}]),
-			expect_hello(2, Socket, Transport);
-		{ok, 4} ->
-			Transport:setopts(Socket, [{packet, 4}, {active, once}]),
-			expect_hello(4, Socket, Transport)
+			expect_hello(Socket, Transport)
 	end.
 
 handshake(Socket, Transport) ->
 	Transport:send(Socket, ["venti", $-, "02:04", $-, "eVenti server ", ?EVENTI_VERSION, $\n]),
 	case pull(Socket, Transport, false) of
 		{ok, Data} ->
-			 {ok, parse_version(Socket, Data)};
+			ok = parse_version(Socket, Data);
 		stop -> stop
 	end.
 
@@ -92,16 +89,20 @@ handshake(Socket, Transport) ->
 %% Operation
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-verify_version(2, <<"02">>) -> ok;
-verify_version(4, <<"04">>) -> ok.
-
-expect_hello(V, Socket, Transport) ->
-	case pull(Socket, Transport, true) of
+expect_hello(Socket, Transport) ->
+	case pull(Socket, Transport, false) of
 		{ok, Packet} ->
 		  {t_hello, _Tag, Version, _Uid, _Strength, _Crypto, _Codec} = T = decode_packet_t(Packet),
-		  verify_version(V, Version),
 		  {reply, Rep} = eventi_srv:handle_msg(T),
 		  Transport:send(Socket, encode_packet_r(Rep)),
+		  case Version of
+		  	<<"02">> -> 
+		  		ok = lager:debug("Selecting version 02"),
+		  		Transport:setopts(Socket, [{packet, 2}, {active, once}]);
+		  	<<"04">> ->
+		  		ok = lager:debug("Selecting version 04"),
+		  		Transport:setopts(Socket, [{packet, 4}, {active, once}])
+		  end,
 		  loop(Socket, Transport);
 		stop -> ok
 	end.
@@ -250,14 +251,6 @@ parse_version(_Socket, Data) ->
 	DecodedVersions = binary:split(Versions, <<":">>, [global]),
 	%% TODO: Only accept valid versions!
 	ok = lager:debug("Client versions understood: ~p", [DecodedVersions]), %% @todo: Output more information about the socket
-	pick_version(DecodedVersions).
+	ok.
 
-%% pick_version/1 looks through possible versions and tries to consecutively upgrade the versions
-pick_version(Versions) ->
-	pick_version(Versions, 0).
 
-pick_version([], 0) -> exit(no_applicable_version);
-pick_version([], C) -> C;
-pick_version([<<"02">> | Vs], C) when C < 2 -> pick_version(Vs, 2);
-pick_version([<<"04">> | Vs], C) when C < 4 -> pick_version(Vs, 4);
-pick_version([_V | Vs], C) -> pick_version(Vs, C).
