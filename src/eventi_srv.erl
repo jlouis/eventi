@@ -119,7 +119,8 @@ handle_info(Msg, State) ->
 	_ = lager:error("Unknown handle_info: ~p", [Msg]),
 	{noreply, State}.
 	
-terminate(_Reason, _State) ->
+terminate(_Reason, #state { db = DBRef }) ->
+	eleveldb:close(DBRef),
 	ok.
 	
 code_change(_OldVsn, State, _Extra) ->
