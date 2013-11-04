@@ -12,7 +12,8 @@
 	start_link/0,
 	handle_msg/1,
 	read/3,
-	write/2
+	write/2,
+	status/2
 	]).
 	
 -record(state, {
@@ -50,6 +51,10 @@ write(Type, Data) ->
 	{reply, {r_write, 0, Score}} = handle_msg({t_write, 0, Type, Data}),
 	Score.
 
+%% status/2 asks the venti system for the status of a key
+status(Score, Type) ->
+	gen_server:call({status, Score, Type}).
+
 %% handle_msg/1 handles Venti client messages on the server side
 %% We try hard to avoid going through the gen_server if possible
 -spec handle_msg(Request) -> {reply, Reply} | {stop, Reason}
@@ -83,10 +88,15 @@ handle_msg({t_goodbye, _Tag}) -> {stop, goodbye}.
 %% Callbacks
 
 init([VentiDir]) ->
+	process_flag(trap_exit, true),
 	ok = lager:debug("Opening venti data store at ~p", [VentiDir]),
 	{ok, DBRef} = eleveldb:open(VentiDir, [{create_if_missing, true}]),
 	{ok, #state{ db = DBRef }}.
 	
+handle_call({status, Score, Type}, _From, #state { db = Db } = State) ->
+	Key = <<Score/binary, Type>>,
+	Res = eleveldb:status(Db, Key),
+	{reply, Res, State};
 handle_call({write, Score, Type, Data}, _From, #state { db = Db } = State) ->
 	Key = <<Score/binary, Type>>,
 	lager:debug("Writing: ~p", [Key]),
