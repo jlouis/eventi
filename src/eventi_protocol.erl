@@ -111,10 +111,8 @@ loop(Socket, Transport) ->
 	case pull(Socket, Transport, true) of
 		{ok, Packet} ->
 			T = decode_packet_t(Packet),
-			ok = lager:debug("T packet: ~p", [T]),
 			case eventi_srv:handle_msg(T) of
 				{reply, Rep} ->
-					ok = lager:debug("R packet: ~p", [Rep]),
 					Transport:send(Socket, encode_packet_r(Rep)),
 					loop(Socket, Transport);
 				{stop, goodbye} ->
