@@ -12,8 +12,7 @@
 	start_link/0,
 	handle_msg/1,
 	read/3,
-	write/2,
-	status/2
+	write/2
 	]).
 	
 -record(state, {
@@ -50,10 +49,6 @@ read(Score, Type, MaxCount) ->
 write(Type, Data) ->
 	{reply, {r_write, 0, Score}} = handle_msg({t_write, 0, Type, Data}),
 	Score.
-
-%% status/2 asks the venti system for the status of a key
-status(Score, Type) ->
-	gen_server:call({status, Score, Type}).
 
 %% handle_msg/1 handles Venti client messages on the server side
 %% We try hard to avoid going through the gen_server if possible
