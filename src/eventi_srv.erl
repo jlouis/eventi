@@ -63,7 +63,7 @@ handle_msg({t_ping, Tag}) -> {reply, {r_ping, Tag}};
 handle_msg({t_write, Tag, Type, Data}) ->
 	Score = score(Data),
 	ok = gen_server:call(?MODULE, {write, Score, Type, Data}, ?TIMEOUT),
-	ok = lager:debug("Writing ~B bytes with Score=~p", [byte_size(Data), Score]),
+	ok = lager:debug("Writing ~B bytes with Score=~p, type=~p", [byte_size(Data), Score, Type]),
 	{reply, {r_write, Tag, Score}};
 handle_msg({t_read, Tag, Score, Type, Count}) ->
 	case gen_server:call(?MODULE, {read, Score, Type}, ?TIMEOUT) of
