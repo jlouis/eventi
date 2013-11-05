@@ -87,15 +87,21 @@ init([VentiDir]) ->
 	ok = lager:debug("Opening venti data store at ~p", [VentiDir]),
 	{ok, DBRef} = eleveldb:open(VentiDir, [{create_if_missing, true}]),
 	{ok, #state{ db = DBRef }}.
-	
-handle_call({status, Score, Type}, _From, #state { db = Db } = State) ->
-	Key = <<Score/binary, Type>>,
-	Res = eleveldb:status(Db, Key),
-	{reply, Res, State};
+
+-define(WRITE_THRESHOLD, 8192).
+idempotent_write(Db, Key, Data) when byte_size(Data) < ?WRITE_THRESHOLD ->
+	eleveldb:write(Db, [{put, Key, Data}], []);
+idempotent_write(Db, Key, Data) ->
+	case eleveldb:get(Db, Key, []) of
+		{ok, _} -> ok;
+		not_found ->
+			eleveldb:write(Db, [{put, Key, Data}], [])
+	end.
+
 handle_call({write, Score, Type, Data}, _From, #state { db = Db } = State) ->
 	Key = <<Score/binary, Type>>,
 	lager:debug("Writing: ~p", [Key]),
-	ok = eleveldb:write(Db, [{put, Key, Data}], []),
+	ok = idempotent_write(Db, Key, Data),
 	{reply, ok, State};
 handle_call({read, Score, Type}, _From, #state { db = Db } = State) ->
 	Key = <<Score/binary, Type>>,
